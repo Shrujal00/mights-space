@@ -1,0 +1,40 @@
+# Web
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20        # required by FastAPI for file uploads
+pydantic-settings==2.7.1
+
+# Database
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+
+# Static analysis
+pefile==2024.8.26
+yara-python==4.5.4              # NOTE: no cp314 wheel — container pins Python 3.13
+python-magic==0.4.27            # needs libmagic1 system package
+androguard==4.1.4               # APK manifest, permissions, certificates, DEX strings
+
+# Dynamic analysis
+speakeasy-emulator==1.5.11      # Windows PE emulation; the sample never runs natively
+setuptools<81                   # unicorn 1.0.2 imports pkg_resources, dropped in 81
+# Android instrumentation. PINNED TO 16.x ON PURPOSE: frida 17 stopped bundling
+# the Java bridge with the agent runtime, so `Java.perform` in the hook script
+# fails with "'Java' is not defined" and the app runs completely unobserved.
+# Moving to 17 means compiling the agent with frida-compile and adding a Node
+# build step. The frida-server pushed to the device must match this exactly.
+frida==16.7.19
+frida-tools==13.7.1             # frida-ps, for verifying the device by hand
+
+# Threat intel HTTP
+httpx==0.28.1
+
+# Export
+stix2==3.0.1
+
+# Tests
+pytest==8.3.4
+pytest-asyncio==0.25.2
+respx==0.22.0
+
+# Word report export
+python-docx==1.1.2

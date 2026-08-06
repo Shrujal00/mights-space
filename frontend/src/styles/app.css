@@ -1,0 +1,1132 @@
+/* Component styles, in document order.
+ *
+ * Class names are prefixed per component and no bare element selectors are used
+ * for layout, so nothing here can quietly override anything else. */
+
+/* Page shell -------------------------------------------------------------- */
+
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page {
+  width: 100%;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.foot {
+  margin-top: auto;
+  padding: var(--s-16) 0 var(--s-8);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+}
+
+/* Status rail ------------------------------------------------------------- */
+
+.rail {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--void) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--edge);
+}
+
+.rail__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-6);
+  height: 56px;
+}
+
+.rail__mark {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  white-space: nowrap;
+}
+
+.rail__stats {
+  display: flex;
+  gap: var(--s-6);
+  margin-left: auto;
+  align-items: center;
+}
+
+.rail__stat {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  white-space: nowrap;
+}
+
+/* A ring rather than a dot: filled reads as "on", hollow as "off", and neither
+   needs a colour to be legible. */
+.rail__ring {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+}
+
+.rail__ring--on {
+  background: var(--chalk);
+  border-color: var(--chalk);
+}
+
+@media (max-width: 40rem) {
+  .rail__stats {
+    gap: var(--s-4);
+  }
+  .rail__stat--optional {
+    display: none;
+  }
+}
+
+/* Home hero --------------------------------------------------------------- */
+
+.hero {
+  padding: var(--s-16) 0 var(--s-8);
+}
+
+.hero__thesis {
+  font-family: var(--display);
+  font-stretch: 112%;
+  font-weight: 650;
+  font-size: clamp(2.25rem, 7.5vw, 5rem);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  margin-bottom: var(--s-6);
+}
+
+.hero__line {
+  display: block;
+}
+
+/* The claim is stated, then withdrawn to a whisper. "Never run" is the quieter
+   line because it is the constraint, not the boast. */
+.hero__line--quiet {
+  color: var(--muted);
+}
+
+.hero__sub {
+  max-width: 46ch;
+  color: var(--muted);
+  font-size: var(--t-lead);
+  line-height: 1.5;
+}
+
+/* Drop zone --------------------------------------------------------------- */
+
+.drop {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin-top: var(--s-8);
+  padding: var(--s-12) var(--s-8);
+  border: 1px solid var(--edge);
+  background: var(--surface);
+  text-align: center;
+  overflow: hidden;
+  transition:
+    border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+}
+
+.drop:hover:not(.drop--busy) {
+  border-color: var(--muted);
+}
+
+.drop--over {
+  border-color: var(--pure);
+  background: #131313;
+  transform: translateY(-2px);
+}
+
+.drop--busy {
+  cursor: progress;
+}
+
+.drop__title {
+  font-family: var(--display);
+  font-stretch: 108%;
+  font-weight: 600;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--chalk);
+}
+
+.drop__hint {
+  margin-top: var(--s-3);
+  color: var(--muted);
+  font-size: var(--t-small);
+}
+
+.drop__pick {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--chalk);
+}
+
+.drop__note {
+  margin-top: var(--s-8);
+  color: var(--muted);
+}
+
+/* A single hairline that crosses the zone while a file is being read. It is the
+   only motion on this screen, so it reads as the machine working. */
+.drop__scan {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--pure),
+    transparent
+  );
+  opacity: 0;
+}
+
+.drop--busy .drop__scan {
+  opacity: 1;
+  animation: scan 1.4s var(--ease) infinite;
+}
+
+/* Percentage travel needs no measurement, so the sweep is correct at any zone
+   height and on the very first frame. */
+@keyframes scan {
+  from {
+    top: 0;
+  }
+  to {
+    top: 100%;
+  }
+}
+
+.drop__error {
+  margin-top: var(--s-4);
+  color: var(--chalk);
+  font-size: var(--t-small);
+  border-top: 1px solid var(--edge);
+  padding-top: var(--s-4);
+}
+
+/* Reading sequence — the signature moment --------------------------------- */
+
+.reading {
+  margin-top: var(--s-12);
+  border-top: 1px solid var(--edge);
+}
+
+.reading__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: var(--s-4);
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--edge);
+  color: var(--muted);
+  opacity: 0.35;
+  transition:
+    opacity var(--mid) var(--ease),
+    color var(--mid) var(--ease);
+}
+
+.reading__row--active,
+.reading__row--done {
+  opacity: 1;
+}
+
+.reading__row--active {
+  color: var(--chalk);
+}
+
+.reading__row--done {
+  color: var(--muted);
+}
+
+.reading__name {
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.reading__state {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* The active row fills its own baseline left to right. */
+.reading__fill {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 1px;
+  width: 100%;
+  background: var(--pure);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.reading__row--active .reading__fill {
+  animation: sweep 2.4s var(--ease) forwards;
+}
+
+.reading__row--done .reading__fill {
+  transform: scaleX(1);
+  background: var(--edge);
+}
+
+@keyframes sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Sample list ------------------------------------------------------------- */
+
+.list {
+  padding: var(--s-12) 0;
+}
+
+.list__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--chalk);
+}
+
+.list__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-3);
+  margin: 0 calc(var(--s-3) * -1);
+  border-bottom: 1px solid var(--edge);
+  transition: background var(--fast) var(--ease);
+}
+
+.list__row:hover {
+  background: var(--surface);
+}
+
+.list__name {
+  font-size: var(--t-base);
+  color: var(--chalk);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list__meta {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* Verdict as a tag in the list: the same value hierarchy as the report stamp,
+   shrunk. Filled = malicious, outlined = suspicious, hairline = unknown. */
+.tag {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px var(--s-2);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.tag--malicious {
+  background: var(--pure);
+  color: var(--void);
+}
+
+.tag--suspicious {
+  border-color: var(--chalk);
+  color: var(--chalk);
+}
+
+.tag--unknown {
+  border-color: var(--edge);
+  color: var(--muted);
+}
+
+.tag--pending {
+  border-color: var(--edge);
+  color: var(--muted);
+}
+
+@media (max-width: 40rem) {
+  .list__row {
+    grid-template-columns: 1fr auto;
+  }
+  .list__row .list__meta {
+    display: none;
+  }
+}
+
+.empty {
+  padding: var(--s-12) 0;
+  color: var(--muted);
+}
+
+/* Report ------------------------------------------------------------------ */
+
+.report {
+  padding-bottom: var(--s-24);
+}
+
+.report__top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-6) 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color var(--fast) var(--ease);
+}
+
+.back:hover {
+  color: var(--chalk);
+}
+
+.report__actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.btn {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--edge);
+  color: var(--muted);
+  transition:
+    border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.btn:hover {
+  border-color: var(--chalk);
+  color: var(--chalk);
+}
+
+.btn--solid {
+  background: var(--pure);
+  border-color: var(--pure);
+  color: var(--void);
+}
+
+.btn--solid:hover {
+  background: var(--chalk);
+  border-color: var(--chalk);
+  color: var(--void);
+}
+
+.report__file {
+  padding-bottom: var(--s-8);
+}
+
+.report__name {
+  font-size: var(--t-title);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+
+.report__type {
+  margin-top: var(--s-2);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--t-small);
+}
+
+/* Verdict stamp ----------------------------------------------------------- */
+
+.verdict {
+  padding: var(--s-12) var(--s-8);
+  border: 1px solid var(--edge);
+  animation: press var(--slow) var(--ease) both;
+}
+
+@keyframes press {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.verdict--malicious {
+  background: var(--pure);
+  border-color: var(--pure);
+  color: var(--void);
+}
+
+.verdict--suspicious {
+  background: transparent;
+  border-color: var(--chalk);
+  color: var(--chalk);
+}
+
+.verdict--unknown {
+  background: transparent;
+  border-color: var(--edge);
+  color: var(--muted);
+}
+
+.verdict__word {
+  font-family: var(--display);
+  font-stretch: 118%;
+  font-weight: 700;
+  font-size: var(--t-display);
+  line-height: 0.84;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.verdict__line {
+  margin-top: var(--s-6);
+  font-size: var(--t-lead);
+  line-height: 1.4;
+  max-width: 40ch;
+}
+
+.verdict--malicious .verdict__line {
+  color: var(--void);
+}
+
+.verdict--suspicious .verdict__line {
+  color: var(--chalk);
+}
+
+.verdict--unknown .verdict__line {
+  color: var(--chalk);
+}
+
+/* Sections ---------------------------------------------------------------- */
+
+.sec {
+  padding-top: var(--s-16);
+}
+
+.sec__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-bottom: var(--s-4);
+  margin-bottom: var(--s-6);
+  border-bottom: 1px solid var(--chalk);
+}
+
+.sec__count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--muted);
+  letter-spacing: 0.14em;
+}
+
+/* Reasons ----------------------------------------------------------------- */
+
+.why__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-4);
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--edge);
+  line-height: 1.6;
+}
+
+/* A rule rather than a bullet: this is a list of findings, not a sequence, so
+   nothing here should imply order or rank. */
+.why__mark {
+  width: 20px;
+  height: 1px;
+  margin-top: 0.7em;
+  background: var(--chalk);
+}
+
+/* Capabilities ------------------------------------------------------------ */
+
+.cap {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.cap__item {
+  padding: var(--s-4);
+  border: 1px solid var(--edge);
+  background: var(--surface);
+  transition:
+    border-color var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+}
+
+.cap__item:hover {
+  border-color: var(--muted);
+  transform: translateY(-1px);
+}
+
+.cap__text {
+  font-size: var(--t-base);
+  line-height: 1.5;
+  color: var(--chalk);
+}
+
+.cap__proof {
+  margin-top: var(--s-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.chip {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  border: 1px solid var(--edge);
+  padding: 2px var(--s-2);
+}
+
+/* Destinations ------------------------------------------------------------ */
+
+.dest__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.dest__value {
+  font-family: var(--mono);
+  font-size: var(--t-base);
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+
+.dest__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
+  align-items: center;
+}
+
+.dest__fact {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+/* Confidence as a filled track. Length is the only variable — no hue needed to
+   read "more" or "less". */
+.meter {
+  display: inline-block;
+  width: 72px;
+  height: 4px;
+  background: var(--edge);
+  position: relative;
+  overflow: hidden;
+}
+
+.meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--chalk);
+  transform-origin: left;
+  animation: meter var(--slow) var(--ease) both;
+}
+
+@keyframes meter {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.dest__flag {
+  background: var(--pure);
+  color: var(--void);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px var(--s-2);
+}
+
+/* Signatures and contents ------------------------------------------------- */
+
+.rowline {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.rowline__main {
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+
+.rowline__note {
+  color: var(--muted);
+  font-size: var(--t-small);
+}
+
+.file {
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.file__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.file__name {
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+
+.file__sections {
+  margin-top: var(--s-3);
+  display: grid;
+  gap: var(--s-2);
+}
+
+.file__section {
+  display: grid;
+  grid-template-columns: 8ch 1fr 5ch;
+  gap: var(--s-3);
+  align-items: center;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+/* Fingerprint ------------------------------------------------------------- */
+
+.print {
+  display: grid;
+  gap: 0;
+}
+
+.print__row {
+  display: grid;
+  grid-template-columns: 10ch 1fr;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--edge);
+  align-items: baseline;
+}
+
+.print__value {
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color var(--fast) var(--ease);
+}
+
+.copy:hover {
+  color: var(--chalk);
+}
+
+/* Sources ----------------------------------------------------------------- */
+
+.sources {
+  display: grid;
+  gap: 0;
+}
+
+.source {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.source__name {
+  color: var(--chalk);
+}
+
+.source__state {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.source__state--ok {
+  color: var(--chalk);
+}
+
+/* Notices ----------------------------------------------------------------- */
+
+.notice {
+  padding: var(--s-4);
+  border: 1px solid var(--edge);
+  border-left: 2px solid var(--muted);
+  background: var(--surface);
+  color: var(--chalk);
+  font-size: var(--t-small);
+  line-height: 1.6;
+}
+
+.notice + .notice {
+  margin-top: var(--s-2);
+}
+
+/* The closing statement. Every report ends on the same sentence, so it is set
+   as a standing rule rather than a paragraph. */
+.coda {
+  margin-top: var(--s-16);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--edge);
+  color: var(--muted);
+  max-width: var(--measure);
+  font-size: var(--t-small);
+  line-height: 1.7;
+}
+
+/* Export feedback ---------------------------------------------------------- */
+
+.report__note {
+  flex-basis: 100%;
+  margin-top: var(--s-2);
+  text-align: right;
+  color: var(--muted);
+  font-size: var(--t-small);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+/* Android application ----------------------------------------------------- */
+
+.apk__identity {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-6);
+  padding: var(--s-6);
+  border: 1px solid var(--edge);
+  background: var(--surface);
+}
+
+@media (max-width: 40rem) {
+  .apk__identity {
+    grid-template-columns: 1fr;
+    gap: var(--s-4);
+  }
+}
+
+.apk__claim {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+/* Both halves are set at the same size deliberately. The finding is that these
+   two things disagree, so neither may look like the subordinate one. */
+.apk__label,
+.apk__package {
+  font-size: var(--t-lead);
+  line-height: 1.3;
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+
+.apk__package {
+  font-family: var(--mono);
+  font-size: var(--t-base);
+}
+
+.apk__signals {
+  margin-top: var(--s-4);
+  display: grid;
+  gap: var(--s-2);
+}
+
+.apk__signal {
+  padding: var(--s-4);
+  border: 1px solid var(--chalk);
+}
+
+.apk__signalText {
+  color: var(--chalk);
+  line-height: 1.6;
+}
+
+.apk__signalDetail {
+  margin-top: var(--s-2);
+  color: var(--muted);
+  font-size: var(--t-micro);
+  overflow-wrap: anywhere;
+}
+
+.apk__perms {
+  margin-top: var(--s-6);
+  display: grid;
+  gap: var(--s-3);
+}
+
+.apk__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.apk__cert {
+  margin-top: var(--s-6);
+  display: grid;
+  gap: var(--s-2);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--edge);
+  overflow-wrap: anywhere;
+}
+
+/* Suspicious strings ------------------------------------------------------- */
+
+.strings__group {
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.strings__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-3);
+}
+
+.strings__value {
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+  padding: 2px 0;
+}
+
+/* Sidebar ----------------------------------------------------------------- */
+
+.side {
+  width: 220px;
+  min-height: 100dvh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  background: var(--void);
+  border-right: 1px solid var(--edge);
+  display: flex;
+  flex-direction: column;
+}
+
+.side__head {
+  padding: var(--s-6) var(--s-4);
+  border-bottom: 1px solid var(--edge);
+}
+
+.side__brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.side__crest {
+  font-size: var(--t-micro);
+}
+
+.side__title {
+  font-family: var(--display);
+  font-size: var(--t-lead);
+  font-weight: 650;
+  color: var(--chalk);
+  text-transform: uppercase;
+}
+
+.side__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s-4) 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.side__link {
+  display: flex;
+  align-items: center;
+  padding: var(--s-2) var(--s-6);
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  color: var(--muted);
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.side__link:hover {
+  background: var(--surface);
+  color: var(--chalk);
+}
+
+.side__link--active {
+  color: var(--chalk);
+  background: var(--surface);
+  border-left: 2px solid var(--pure);
+  padding-left: calc(var(--s-6) - 2px);
+}
+
+.side__foot {
+  padding: var(--s-4) var(--s-6);
+  border-top: 1px solid var(--edge);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.side__status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Dashboard --------------------------------------------------------------- */
+
+.dash {
+  padding-top: var(--s-8);
+  padding-bottom: var(--s-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-12);
+}
+
+.dash__filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+}
+
+.dash__overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-4);
+}
+
+.stat {
+  padding: var(--s-4) var(--s-6);
+  border: 1px solid var(--edge);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.stat__val {
+  font-family: var(--display);
+  font-size: var(--t-title);
+  font-weight: 700;
+  color: var(--chalk);
+  line-height: 1;
+}
+
+.dash__grid {
+  display: grid;
+  gap: var(--s-12);
+}
+
+.dash__table {
+  display: grid;
+  gap: 0;
+}
+
+.dash__table-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.chip--solid {
+  background: var(--pure);
+  color: var(--void);
+  border-color: var(--pure);
+  font-weight: 600;
+}
+
+@media (max-width: 40rem) {
+  .side {
+    position: relative;
+    width: 100%;
+    min-height: auto;
+  }
+}

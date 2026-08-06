@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: malware
+      POSTGRES_PASSWORD: malware
+      POSTGRES_DB: malware_analysis
+    volumes:
+      # Postgres 18 stores data under a major-version subdirectory so that
+      # `pg_upgrade --link` can work across a single mount point. Mounting the
+      # old /var/lib/postgresql/data path makes the image refuse to start.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U malware -d malware_analysis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://malware:malware@db:5432/malware_analysis
+      SAMPLE_STORAGE_DIR: /app/storage/samples
+    volumes:
+      - ./backend:/app
+      - samples:/app/storage/samples
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    environment:
+      # The dev server proxies /api to the backend. Inside the container that is
+      # the compose service name, not localhost.
+      BACKEND_ORIGIN: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      # Keep container-built node_modules out of the host bind mount: the two
+      # platforms need different esbuild binaries.
+      - frontend_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  samples:
+  frontend_modules:

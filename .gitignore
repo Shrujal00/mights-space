@@ -1,0 +1,32 @@
+# Samples are evidence — never commit them
+backend/storage/samples/*
+!backend/storage/samples/.gitkeep
+
+# Sandbox tooling: a 110 MB frida-server binary, fetched per frida version
+backend/storage/sandbox/*
+!backend/storage/sandbox/.gitkeep
+
+# Sandbox run artifacts (pcap, logcat)
+backend/storage/detonations/
+
+# Secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# OS
+.DS_Store

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A deliberately built stand-in for the fraud apps this system triages.
+
+  It reproduces the behaviour that matters — read the victim's messages and
+  contacts, then post them to a server — and nothing else. It has no evasion,
+  no persistence and no payload, and the address it posts to is a loopback
+  address that goes nowhere outside the emulator.
+
+  This exists so the dynamic pipeline can be exercised end to end without
+  running live malware. Real samples detect emulators and play dead, which
+  makes them useless as a test: a green run would prove nothing.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="space.mights.mocksample">
+
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application android:label="Mock Bank">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,64 @@
+/* Design tokens.
+ *
+ * The palette is strictly achromatic — there is not one hue in this file, and
+ * that is a product decision rather than a stylistic one. The backend refuses to
+ * describe any file as safe, because static analysis cannot prove the absence of
+ * harm. A traffic-light interface would undo that: green reads as "cleared". A
+ * monochrome system has no green to misuse, so severity is carried by value and
+ * inversion instead — the loudest thing on the page is a white block, and
+ * nothing quieter can be mistaken for a clean bill of health.
+ */
+
+:root {
+  /* Ground to figure. Six neutral steps, no hue. */
+  --void: #070707; /* page */
+  --surface: #0f0f0f; /* raised panels, hover states */
+  --edge: #1f1f1f; /* hairlines, dividers */
+  --muted: #6e6e6e; /* secondary text, labels at rest */
+  --chalk: #e8e8e8; /* primary text */
+  --pure: #ffffff; /* inversion ground, peak emphasis */
+
+  /* Type */
+  --display: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* A tight scale — 1.25 through the body range, then a jump for display, so
+     the verdict is not merely "bigger" but categorically different. */
+  --t-micro: 0.6875rem; /* 11px — mono labels */
+  --t-small: 0.8125rem; /* 13px — data, captions */
+  --t-base: 0.9375rem; /* 15px — body */
+  --t-lead: 1.125rem; /* 18px — narrative lead */
+  --t-title: 1.5rem; /* 24px — file name */
+  --t-display: clamp(3rem, 11vw, 7.5rem); /* verdict */
+
+  /* Rhythm. Everything is a multiple of 4. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-6: 1.5rem;
+  --s-8: 2rem;
+  --s-12: 3rem;
+  --s-16: 4rem;
+  --s-24: 6rem;
+
+  --measure: 66ch; /* prose line length */
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+  --page: 68rem;
+
+  /* Motion. One easing curve for everything that moves, so the interface has a
+     single physical character rather than a collection of effects. */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --fast: 160ms;
+  --mid: 320ms;
+  --slow: 620ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fast: 1ms;
+    --mid: 1ms;
+    --slow: 1ms;
+  }
+}
