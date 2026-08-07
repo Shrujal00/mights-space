@@ -158,6 +158,14 @@ export interface ExfiltrationFinding {
   confidence: "strong" | "probable";
 }
 
+/* One line the sandbox reported while it was working. Real messages, not a
+ * decorative progress bar — a detonation takes minutes and the wait must not
+ * be silent for whoever is watching. */
+export interface ProgressEntry {
+  at: string | null;
+  message: string;
+}
+
 export interface DetonationRun {
   platform: "android" | "windows";
   engine: "frida" | "speakeasy";
@@ -168,6 +176,7 @@ export interface DetonationRun {
   timed: boolean;
   coverage: string;
   artifacts: Record<string, string>;
+  progress: ProgressEntry[];
   events: BehaviorEvent[];
   exfiltration: ExfiltrationFinding[];
 }
@@ -201,4 +210,8 @@ export interface Report {
   techniques: Technique[];
   providers: ProviderStatus[];
   detonations: DetonationRun[];
+  /* Whether this server could run this file if asked. Drives the behavioural
+   * analysis button — false when no sandbox is configured, the sample is still
+   * being read, or a run is already in flight. */
+  can_detonate: boolean;
 }

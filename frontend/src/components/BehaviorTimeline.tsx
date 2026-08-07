@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { formatOffset, formatBytes, formatRecordCount } from "../api/format";
+import { formatOffset, formatBytes, formatRecordCount, describeObservation } from "../api/format";
 import type { BehaviorEvent, ExfiltrationFinding } from "../api/types";
 import "./BehaviorTimeline.css";
 
@@ -74,10 +74,11 @@ export default function BehaviorTimeline({ events, exfiltration, timed, coverage
               </div>
               
               <div className="bt-content">
-                <div className="bt-category mono">{ev.category}</div>
-                <div className="bt-action">{ev.action}</div>
-                <div className="bt-target">{ev.target}</div>
-                {ev.detail && <div className="bt-detail">{ev.detail}</div>}
+                <div className="bt-action">{describeObservation(ev)}</div>
+                <div className="bt-meta">
+                  <span className="bt-category mono">{ev.category}</span>
+                  {ev.detail && <span className="bt-detail">{ev.detail}</span>}
+                </div>
                 {recordCountDisplay && <div className="bt-record-count">{recordCountDisplay}</div>}
                 {sizeDisplay && <div className="bt-size mono">{sizeDisplay}</div>}
               </div>

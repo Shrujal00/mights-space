@@ -285,9 +285,21 @@ def _parse_sections(content: str) -> dict[str, str]:
 
     Anything the model added beyond the requested keys is dropped rather than
     rendered — the document's structure is fixed by this code, not by the model.
+
+    Cloud models often wrap JSON in markdown fences even when `format: json` is
+    set, so those are stripped before parsing.
     """
+    text = content.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+
     try:
-        parsed = json.loads(content)
+        parsed = json.loads(text)
     except (ValueError, TypeError):
         return {}
     if not isinstance(parsed, dict):

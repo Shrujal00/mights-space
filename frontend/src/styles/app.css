@@ -871,6 +871,72 @@
   cursor: progress;
 }
 
+/* What we saw ------------------------------------------------------------- */
+
+.saw {
+  margin: var(--s-6) 0;
+  padding: var(--s-5);
+  border: 1px solid var(--edge);
+  background: var(--surface);
+}
+
+.saw__title {
+  font-family: var(--display);
+  font-size: var(--t-lead);
+  font-weight: 500;
+  margin: 0 0 var(--s-2);
+}
+
+.saw__context {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-small);
+}
+
+.saw__lead {
+  margin: 0 0 var(--s-4);
+  padding: var(--s-4);
+  border-left: 3px solid var(--pure);
+  font-size: var(--t-base);
+  line-height: 1.55;
+  color: var(--chalk);
+}
+
+.saw__patterns {
+  display: grid;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.saw__detail-label {
+  margin: 0 0 var(--s-2);
+}
+
+.saw__note {
+  margin: var(--s-4) 0 0;
+  font-size: var(--t-small);
+  line-height: 1.5;
+}
+
+.saw__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--s-3);
+}
+
+.saw__item {
+  padding-left: var(--s-4);
+  border-left: 2px solid var(--chalk);
+  font-size: var(--t-base);
+  line-height: 1.5;
+}
+
+.saw__coverage {
+  margin: var(--s-4) 0 0;
+  font-size: var(--t-small);
+}
+
 /* Android application ----------------------------------------------------- */
 
 .apk__identity {
@@ -1123,10 +1189,128 @@
   font-weight: 600;
 }
 
+/* Behavioural analysis — deliberate step after static reading -------------- */
+
+.detonate {
+  margin-top: var(--s-12);
+  padding: var(--s-8) 0;
+  border-top: 1px solid var(--edge);
+  border-bottom: 1px solid var(--edge);
+}
+
+.detonate__title {
+  font-family: var(--display);
+  font-size: var(--t-lead);
+  font-weight: 600;
+  font-stretch: 112%;
+  color: var(--chalk);
+  margin: 0 0 var(--s-3);
+}
+
+.detonate__copy {
+  max-width: 40rem;
+  color: var(--muted);
+  font-size: var(--t-small);
+  line-height: 1.55;
+  margin: 0 0 var(--s-6);
+}
+
+.detonate .notice {
+  margin-top: var(--s-4);
+}
+
+/* Live sandbox log — real progress lines, not invented stages -------------- */
+
+.detonation__intro {
+  margin-bottom: var(--s-6);
+}
+
+.detonation__title {
+  font-family: var(--display);
+  font-size: var(--t-lead);
+  font-weight: 600;
+  font-stretch: 112%;
+  color: var(--chalk);
+  margin: 0 0 var(--s-2);
+}
+
+.detonation__context {
+  margin: 0 0 var(--s-2);
+  color: var(--muted);
+  font-size: var(--t-small);
+  line-height: 1.5;
+  max-width: 40rem;
+}
+
+.detonation__waiting {
+  margin: 0;
+  padding: var(--s-4) 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--edge);
+  animation: pulse-muted 1.6s var(--ease) infinite;
+}
+
+@keyframes pulse-muted {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.detonation__log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.detonation__line {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--edge);
+  color: var(--muted);
+}
+
+.detonation__line--live {
+  color: var(--chalk);
+}
+
+.detonation__when {
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.detonation__line--live .detonation__when {
+  color: var(--chalk);
+}
+
+.detonation__msg {
+  font-size: var(--t-small);
+  line-height: 1.45;
+}
+
+.report__run + .report__run {
+  margin-top: var(--s-8);
+}
+
 @media (max-width: 40rem) {
   .side {
     position: relative;
     width: 100%;
     min-height: auto;
+  }
+
+  .detonation__line {
+    grid-template-columns: 1fr;
+    gap: var(--s-1);
   }
 }

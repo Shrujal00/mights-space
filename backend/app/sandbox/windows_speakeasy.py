@@ -72,14 +72,9 @@ def detonate_pe(path: Path | str, on_progress=None) -> DetonationResult:
     """
     started_at = datetime.now(timezone.utc)
 
-    def say(message: str) -> None:
-        """Report a stage. Progress reporting must never break a run."""
-        if on_progress is None:
-            return
-        try:
+    def note(message: str) -> None:
+        if on_progress is not None:
             on_progress(message)
-        except Exception:  # noqa: BLE001
-            pass
 
     def failure(error: str) -> DetonationResult:
         return DetonationResult.failed(
@@ -90,29 +85,27 @@ def detonate_pe(path: Path | str, on_progress=None) -> DetonationResult:
             error=error,
         )
 
-    say("Loading the program into an emulated computer")
-
     with _third_party_warnings_contained():
         try:
+            note("Loading the program into an emulated computer")
             speakeasy = _import_speakeasy()
             emulator = speakeasy.Speakeasy()
             module = emulator.load_module(str(path))
         except Exception as exc:  # noqa: BLE001 - a sandbox reports, never raises
             return failure(f"the file could not be loaded as a Windows program: {exc}")
 
-        say("Running its instructions on a simulated processor")
         stopped_by = ""
         try:
+            note("Running its instructions on a simulated processor")
             emulator.run_module(module)
         except Exception as exc:  # noqa: BLE001 - stopping early is the normal case
             stopped_by = f"{type(exc).__name__}: {exc}"
 
         try:
+            note("Matching what it did against known techniques")
             report = emulator.get_report()
         except Exception as exc:  # noqa: BLE001
             return failure(f"the emulator produced no report: {exc}")
-
-    say("Matching what it did against known techniques")
 
     return DetonationResult(
         platform=WINDOWS,
@@ -255,6 +248,20 @@ def _file_events(entry: dict, started_at: datetime) -> list[BehaviorEvent]:
     return events
 
 
+def _network_action(method: str | None) -> str:
+    """Map a Speakeasy winsock method to a behaviour action."""
+    if not method:
+        return "connected"
+    name = method.rsplit(".", 1)[-1].lower()
+    if name in {"recv", "received"}:
+        return "recv"
+    if name in {"send", "sent"}:
+        return "sent"
+    if name in {"connect", "connected", "open", "opened"}:
+        return "connected"
+    return name.replace("_", " ")
+
+
 def _network_events(entry: dict, started_at: datetime) -> list[BehaviorEvent]:
     traffic = entry.get("network_events") or {}
     if not isinstance(traffic, dict):
@@ -281,19 +288,33 @@ def _network_events(entry: dict, started_at: datetime) -> list[BehaviorEvent]:
         if not isinstance(connection, dict) or not connection.get("server"):
             continue
         server, port = connection["server"], connection.get("port")
+        target = f"{server}:{port}" if port else server
+        method = connection.get("method")
         events.append(
             BehaviorEvent.since(
                 started_at,
                 started_at,
                 category=NETWORK,
-                action="connected",
-                target=f"{server}:{port}" if port else server,
+                action=_network_action(method if isinstance(method, str) else None),
+                target=target,
                 detail=" ".join(
                     part
-                    for part in (connection.get("method"), connection.get("proto"))
+                    for part in (method, connection.get("proto"))
                     if part
                 ),
                 source=SPEAKEASY,
             )
         )
+        if connection.get("recv") or connection.get("received"):
+            events.append(
+                BehaviorEvent.since(
+                    started_at,
+                    started_at,
+                    category=NETWORK,
+                    action="recv",
+                    target=target,
+                    detail="",
+                    source=SPEAKEASY,
+                )
+            )
     return events

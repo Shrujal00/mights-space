@@ -14,9 +14,10 @@ do, never as behaviour that was observed.
 """
 
 from dataclasses import dataclass, field
+from ipaddress import AddressValueError, IPv4Address, IPv6Address
 
 from .attack_map import Technique
-from .behavior import DetonationResult
+from .behavior import NETWORK, DetonationResult
 from .exfiltration import ExfiltrationFinding
 from .pe_analysis import PackingAssessment
 from .reputation.base import ProviderResult
@@ -128,6 +129,10 @@ def summarize(findings: SampleFindings) -> Summary:
         reasons.append(reason)
         raise_to(signal)
 
+    for reason, signal in _observed_network_signals(findings):
+        reasons.append(reason)
+        raise_to(signal)
+
     if findings.yara_rules:
         reasons.append(
             f"The file matched {len(findings.yara_rules)} known malware signature(s): "
@@ -213,6 +218,97 @@ def _destination_signals(indicators: list[IndicatorFinding]):
                     f"activity by other victims, with {score}% confidence.",
                     SUSPICIOUS,
                 )
+
+
+_OUTBOUND_NETWORK_ACTIONS = frozenset({"connected", "opened", "sent", "looked up"})
+_INBOUND_NETWORK_ACTIONS = frozenset({"recv", "received", "read"})
+
+
+def _observed_network_signals(findings: SampleFindings):
+    """Contact with a remote host while the sample ran.
+
+    Exfiltration pairings remain the strongest mobile-fraud signal. These rules
+    catch command-and-control style traffic that never paired a read with a send.
+    """
+    detonation = findings.detonation
+    if detonation is None or not detonation.executed:
+        return
+
+    known_servers = {
+        indicator.value: indicator.threatfox.data.get("malware") or "a known malware family"
+        for indicator in findings.indicators
+        if indicator.threatfox and indicator.threatfox.status == "ok"
+    }
+
+    by_host = _network_activity_by_host(detonation.events)
+
+    for host, info in by_host.items():
+        if not info["outbound"]:
+            continue
+
+        targets = info["targets"]
+        assert isinstance(targets, set)
+        target = max(targets, key=len) if targets else host
+        family = known_servers.get(host)
+        private = _is_private_host(host)
+
+        if family is not None:
+            yield (
+                f"The file was observed contacting {target} inside the sandbox. "
+                f"That address is a known command-and-control server used by "
+                f"{family}.",
+                MALICIOUS,
+            )
+        elif info["inbound"] and not private:
+            yield (
+                f"The file was observed opening a connection to {target} and "
+                f"receiving data back, consistent with remote command-and-control.",
+                MALICIOUS,
+            )
+        elif info["inbound"] and private:
+            yield (
+                f"The file was observed opening a two-way connection to {target} "
+                f"inside the sandbox — the pattern remote-control malware uses so "
+                f"an attacker can run commands on the machine. The address is on a "
+                f"private lab network, so this is treated as suspicious rather than "
+                f"confirmed command-and-control.",
+                SUSPICIOUS,
+            )
+        elif not private:
+            yield (
+                f"The file was observed contacting {target} inside the sandbox.",
+                SUSPICIOUS,
+            )
+
+
+def _network_activity_by_host(events) -> dict[str, dict[str, set[str] | bool]]:
+    by_host: dict[str, dict[str, set[str] | bool]] = {}
+    for event in events:
+        if event.category != NETWORK:
+            continue
+
+        host = _address_of(event.target)
+        slot = by_host.setdefault(host, {"outbound": False, "inbound": False, "targets": set()})
+        targets = slot["targets"]
+        assert isinstance(targets, set)
+        targets.add(event.target)
+
+        action = event.action.lower()
+        if action in _OUTBOUND_NETWORK_ACTIONS:
+            slot["outbound"] = True
+        if action in _INBOUND_NETWORK_ACTIONS:
+            slot["inbound"] = True
+    return by_host
+
+
+def _is_private_host(host: str) -> bool:
+    """Lab, loopback, and link-local space never justify a verdict on their own."""
+    for parser in (IPv4Address, IPv6Address):
+        try:
+            return not parser(host).is_global
+        except (AddressValueError, ValueError):
+            continue
+    return False
 
 
 def _exfiltration_signals(findings: SampleFindings):

@@ -5,10 +5,12 @@ import { ApiError, api } from "../api/client";
 import { absoluteDate, fileSize, shortType } from "../api/format";
 import type { Report as ReportModel } from "../api/types";
 import BehaviorTimeline from "../components/BehaviorTimeline";
+import DetonateButton from "../components/DetonateButton";
 import DetonationStatus from "../components/DetonationStatus";
 import ReadingSequence from "../components/ReadingSequence";
 import Section from "../components/Section";
 import Verdict from "../components/Verdict";
+import WhatWeSaw from "../components/WhatWeSaw";
 import {
   AndroidApp,
   Capabilities,
@@ -72,6 +74,9 @@ export default function Report() {
   const sampleId = Number(id);
   const [report, setReport] = useState<ReportModel | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /* Bumped when the investigator starts a detonation so polling resumes after
+   * a completed static report had already stopped the previous loop. */
+  const [watch, setWatch] = useState(0);
 
   useEffect(() => {
     if (!Number.isFinite(sampleId)) {
@@ -103,7 +108,7 @@ export default function Report() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [sampleId]);
+  }, [sampleId, watch]);
 
   if (error) {
     return (
@@ -144,17 +149,39 @@ export default function Report() {
       ? paragraphs.at(-2)
       : null;
 
-  const isApk = report.filename.endsWith(".apk") || report.files.some((f) => f.is_apk);
-  const platform = isApk ? "android" : "windows";
-  const engine = isApk ? "frida" : "speakeasy";
+  const activeRun =
+    report.detonations.find((run) => run.status === "running") ??
+    report.detonations.find((run) => run.status === "queued") ??
+    null;
+
+  const platform = activeRun?.platform
+    ?? (report.files.some((f) => f.is_apk) ? "android" : "windows");
+  const engine = activeRun?.engine
+    ?? (platform === "android" ? "frida" : "speakeasy");
 
   /* Capabilities are always read out of the code — the backend deliberately
    * never writes a technique with a dynamic basis, because an inference and an
    * observation must not end up in the same list. What the sample was actually
    * seen doing lives in the timeline below, under its own heading. */
   const hasExecutedRun = report.detonations?.some(
-    (d) => d.status === "complete" || d.status === "timeout"
+    (d) => d.status === "complete" || d.status === "timeout",
   );
+
+  const latestObservedRun =
+    [...report.detonations]
+      .filter((d) => d.status === "complete" || d.status === "timeout")
+      .sort(
+        (a, b) =>
+          Date.parse(b.started_at ?? "") - Date.parse(a.started_at ?? ""),
+      )[0] ?? null;
+
+  const latestDetonation =
+    [...report.detonations].sort(
+      (a, b) => Date.parse(b.started_at ?? "") - Date.parse(a.started_at ?? ""),
+    )[0] ?? null;
+
+  const latestFailed =
+    latestDetonation?.status === "failed" ? latestDetonation : null;
 
   return (
     <main className="page report">
@@ -184,7 +211,15 @@ export default function Report() {
       </header>
 
       {runningStatic && <ReadingSequence done={false} />}
-      {runningDetonation && <DetonationStatus platform={platform} engine={engine} done={false} />}
+
+      {runningDetonation && (
+        <DetonationStatus
+          platform={platform}
+          engine={engine}
+          progress={activeRun?.progress ?? []}
+          done={false}
+        />
+      )}
 
       {report.status === "failed" && (
         <p className="notice" role="alert">
@@ -193,9 +228,11 @@ export default function Report() {
         </p>
       )}
 
-      {(report.status === "complete" || report.status === "detonating") && report.verdict && (
+      {(report.status === "complete") && report.verdict && (
         <>
           <Verdict level={report.verdict} headline={report.headline} />
+
+          <WhatWeSaw run={latestObservedRun} />
 
           {caveat && (
             <div className="sec">
@@ -203,32 +240,38 @@ export default function Report() {
             </div>
           )}
 
-          {/* Sandbox Detonations */}
-          {report.detonations && report.detonations.length > 0 && (
-            <>
-              {report.detonations.map((run, idx) => (
-                <div key={idx} style={{ marginTop: "var(--s-12)" }}>
-                  {run.status === "failed" && (
-                    <Section title="Sandbox Detonation">
-                      <p className="notice" role="alert">
-                        Detonation failed: {run.error || "No error details available."}
-                      </p>
-                    </Section>
-                  )}
+          {report.status === "complete" && report.can_detonate && (
+            <DetonateButton
+              sampleId={report.id}
+              onStarted={() => setWatch((n) => n + 1)}
+            />
+          )}
 
-                  {run.events && run.events.length > 0 && (
-                    <Section title="Observed Behaviour Timeline" count={run.events.length}>
-                      <BehaviorTimeline
-                        events={run.events}
-                        exfiltration={run.exfiltration}
-                        timed={run.timed}
-                        coverage={run.coverage}
-                      />
-                    </Section>
-                  )}
-                </div>
-              ))}
-            </>
+          {latestFailed && (
+            <Section title="Sandbox detonation">
+              <DetonationStatus
+                platform={latestFailed.platform}
+                engine={latestFailed.engine}
+                progress={latestFailed.progress ?? []}
+                done={false}
+                failed
+                error={latestFailed.error}
+              />
+            </Section>
+          )}
+
+          {latestObservedRun && latestObservedRun.events.length > 0 && (
+            <Section
+              title="Step-by-step timeline"
+              count={latestObservedRun.events.length}
+            >
+              <BehaviorTimeline
+                events={latestObservedRun.events}
+                exfiltration={latestObservedRun.exfiltration}
+                timed={latestObservedRun.timed}
+                coverage=""
+              />
+            </Section>
           )}
 
           {report.reasons.length > 0 && (

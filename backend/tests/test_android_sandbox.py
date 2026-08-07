@@ -381,3 +381,112 @@ class TestWhenTheClockStarts:
         )
 
         assert result.events[0].offset_ms == 1500
+
+
+class TestPickingAFrontDoor:
+    """Fraud APKs often hide or omit the LAUNCHER category. Frida's default
+    spawn then fails with 'unable to find a front-door activity'. The sandbox
+    must still open *some* activity so behaviour can be observed."""
+
+    def test_a_main_activity_is_preferred(self):
+        from app.sandbox.android import pick_launch_activity
+
+        chosen = pick_launch_activity(
+            "com.smsreceiver.dhruv2",
+            [
+                "com.smsreceiver.dhruv2.HelperActivity",
+                "com.smsreceiver.dhruv2.MainActivity",
+            ],
+        )
+
+        assert chosen == "com.smsreceiver.dhruv2.MainActivity"
+
+    def test_a_relative_activity_name_is_qualified(self):
+        from app.sandbox.android import pick_launch_activity
+
+        assert (
+            pick_launch_activity("com.example.app", [".MainActivity"])
+            == "com.example.app.MainActivity"
+        )
+
+    def test_any_activity_is_used_when_none_looks_like_a_front_door(self):
+        from app.sandbox.android import pick_launch_activity
+
+        assert (
+            pick_launch_activity("com.example.app", ["com.example.app.Obfuscated"])
+            == "com.example.app.Obfuscated"
+        )
+
+    def test_an_empty_manifest_yields_nothing(self):
+        from app.sandbox.android import pick_launch_activity
+
+        assert pick_launch_activity("com.example.app", []) is None
+
+
+class TestAdbInstallNaming:
+    def test_a_hash_named_sample_is_handed_to_adb_as_an_apk(self, tmp_path, monkeypatch):
+        """Samples are stored under their SHA-256 with no extension. adb
+        refuses anything that does not end in .apk or .apex, so the install
+        step must stage a copy with the right suffix for the duration of the
+        push."""
+        import subprocess
+
+        from app.sandbox.android import _Emulator, _Tools
+
+        sample = tmp_path / (
+            "b1b0c7684bb419d4177eb6e0e5ee7fe7ac6d6ed1b086cfff60ead108b1bc15d0"
+        )
+        sample.write_bytes(b"PK\x03\x04fake")
+
+        adb = tmp_path / "adb"
+        emu_bin = tmp_path / "emulator"
+        adb.write_text("#!/bin/sh\n")
+        emu_bin.write_text("#!/bin/sh\n")
+        adb.chmod(0o755)
+        emu_bin.chmod(0o755)
+
+        seen: list[tuple] = []
+
+        def fake_adb(self, *arguments, timeout=120):
+            seen.append(arguments)
+            return subprocess.CompletedProcess(
+                arguments, 0, stdout="Success\n", stderr=""
+            )
+
+        monkeypatch.setattr(_Emulator, "_adb", fake_adb)
+        error = _Emulator(_Tools(adb, emu_bin), avd="triage").install(sample)
+
+        assert error is None
+        assert seen, "adb was never called"
+        path_arg = seen[0][-1]
+        assert path_arg.endswith(".apk"), path_arg
+
+    def test_a_sample_that_already_ends_in_apk_is_installed_as_itself(
+        self, tmp_path, monkeypatch
+    ):
+        import subprocess
+
+        from app.sandbox.android import _Emulator, _Tools
+
+        sample = tmp_path / "sample.apk"
+        sample.write_bytes(b"PK\x03\x04fake")
+
+        adb = tmp_path / "adb"
+        emu_bin = tmp_path / "emulator"
+        adb.write_text("#!/bin/sh\n")
+        emu_bin.write_text("#!/bin/sh\n")
+        adb.chmod(0o755)
+        emu_bin.chmod(0o755)
+
+        seen: list[tuple] = []
+
+        def fake_adb(self, *arguments, timeout=120):
+            seen.append(arguments)
+            return subprocess.CompletedProcess(
+                arguments, 0, stdout="Success\n", stderr=""
+            )
+
+        monkeypatch.setattr(_Emulator, "_adb", fake_adb)
+        _Emulator(_Tools(adb, emu_bin), avd="triage").install(sample)
+
+        assert seen[0][-1] == str(sample)

@@ -303,8 +303,8 @@ export function AndroidApp({ app }: { app: LeafFile }) {
         permissions={app.high_abuse_permissions}
       />
 
-      {app.certificates.map((certificate) => (
-        <div key={certificate.sha256} className="apk__cert">
+      {app.certificates.map((certificate, index) => (
+        <div key={`${certificate.sha256}-${index}`} className="apk__cert">
           <span className="label">Signing fingerprint</span>
           <p className="mono">{certificate.sha256}</p>
           <p className="rowline__note">

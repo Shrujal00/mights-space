@@ -23,6 +23,7 @@ Two rules hold throughout:
 import os
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
 from datetime import datetime, timezone
@@ -340,6 +341,7 @@ def detonate_apk(
             artifacts=artifacts,
             conditions=_conditions(dwell_seconds, seeded, granted),
             say=say,
+            activity=pick_launch_activity(package, list(manifest.activities)),
         )
     except Exception as exc:  # noqa: BLE001 - a sandbox reports, it never raises
         return failure(f"{type(exc).__name__}: {exc}", artifacts)
@@ -347,6 +349,43 @@ def detonate_apk(
         # An emulator left running holds gigabytes of RAM and blocks the next
         # detonation, which is why this is unconditional.
         emulator.stop()
+
+
+def pick_launch_activity(package: str, activities: list[str]) -> str | None:
+    """Choose an activity Frida / `am start` can open.
+
+    Many fraud APKs omit the LAUNCHER category (or hide the icon), so Frida's
+    default spawn fails with "unable to find a front-door activity". Any
+    declared activity is better than failing the whole run — the hooks still
+    need a process to attach to.
+    """
+    if not package or not activities:
+        return None
+
+    qualified: list[str] = []
+    for activity in activities:
+        if activity.startswith("."):
+            qualified.append(f"{package}{activity}")
+        elif "." not in activity:
+            qualified.append(f"{package}.{activity}")
+        else:
+            qualified.append(activity)
+
+    preferred = (
+        "MainActivity",
+        "LauncherActivity",
+        "SplashActivity",
+        "SplashScreenActivity",
+        "StartActivity",
+        "LoginActivity",
+        "HomeActivity",
+    )
+    for name in preferred:
+        for activity in qualified:
+            short = activity.rsplit(".", 1)[-1]
+            if short == name or short.endswith(name):
+                return activity
+    return qualified[0]
 
 
 def _observe(
@@ -358,6 +397,7 @@ def _observe(
     artifacts: dict[str, str],
     conditions: str = "",
     say=lambda message: None,
+    activity: str | None = None,
 ) -> DetonationResult:
     """Launch the app under Frida, exercise it, and gather what the hooks saw."""
     import frida
@@ -372,7 +412,7 @@ def _observe(
             messages.append(message)
 
     device = frida.get_device_manager().add_remote_device(emulator.frida_address)
-    pid = device.spawn([package])
+    pid = _spawn_instrumented(device, emulator, package, activity)
     session = device.attach(pid)
     script = session.create_script(HOOK_SCRIPT.read_text())
     script.on("message", on_message)
@@ -383,14 +423,17 @@ def _observe(
     # from here.
     launched_at = datetime.now(timezone.utc)
     say("Opening the app and watching what it does")
-    device.resume(pid)
+    try:
+        device.resume(pid)
+    except Exception:  # noqa: BLE001 - am-start fallback is already running
+        pass
 
     status = COMPLETE
     try:
         # Fraud apps do nothing until a screen is touched; the harvest starts
         # once the victim taps through the fake login. Monkey supplies taps that
         # no one has to sit and perform.
-        emulator.drive(package)
+        emulator.drive(package, activity=activity)
         say(f"Letting it run for {dwell_seconds} seconds")
         time.sleep(dwell_seconds)
     finally:
@@ -416,6 +459,47 @@ def _observe(
         conditions=conditions,
         status=status,
         launched_at=launched_at,
+    )
+
+
+def _spawn_instrumented(device, emulator: "_Emulator", package: str, activity: str | None) -> int:
+    """Start the package under Frida, even when it has no LAUNCHER activity.
+
+    Order of attempts:
+    1. spawn with an explicit activity from the manifest
+    2. plain spawn (works for ordinary launcher apps)
+    3. `am start` the activity, then attach to the running process
+
+    The third path can miss a few milliseconds of startup, but it is the
+    difference between a timeline and a failed run for apps that deliberately
+    hide their front door.
+    """
+    import frida
+
+    errors: list[str] = []
+
+    if activity:
+        try:
+            return device.spawn([package], activity=activity)
+        except frida.NotSupportedError as exc:
+            errors.append(str(exc))
+
+    try:
+        return device.spawn([package])
+    except frida.NotSupportedError as exc:
+        errors.append(str(exc))
+
+    if activity:
+        started = emulator.start_activity(package, activity)
+        if started is None:
+            time.sleep(1)
+            try:
+                return device.get_process(package).pid
+            except frida.ProcessNotFoundError as exc:
+                errors.append(str(exc))
+
+    raise frida.NotSupportedError(
+        "; ".join(errors) or "unable to start the application under instrumentation"
     )
 
 
@@ -557,12 +641,30 @@ class _Emulator:
         return False
 
     def install(self, apk_path: Path) -> str | None:
-        """Install the sample. Returns None on success, or the reason it failed."""
-        result = self._adb("install", "-r", "-t", str(apk_path), timeout=300)
-        output = f"{result.stdout}{result.stderr}".strip()
-        if result.returncode != 0 or "Success" not in output:
-            return output or "adb install gave no reason"
-        return None
+        """Install the sample. Returns None on success, or the reason it failed.
+
+        Samples are stored under their SHA-256 with no extension. `adb install`
+        refuses any path that does not end in `.apk` or `.apex`, so a hash-named
+        file is staged under a temporary name for the push and removed afterwards.
+        """
+        staged: Path | None = None
+        try:
+            install_path = apk_path
+            if apk_path.suffix.lower() not in {".apk", ".apex"}:
+                handle, name = tempfile.mkstemp(prefix="sample-", suffix=".apk")
+                os.close(handle)
+                staged = Path(name)
+                shutil.copy2(apk_path, staged)
+                install_path = staged
+
+            result = self._adb("install", "-r", "-t", str(install_path), timeout=300)
+            output = f"{result.stdout}{result.stderr}".strip()
+            if result.returncode != 0 or "Success" not in output:
+                return output or "adb install gave no reason"
+            return None
+        finally:
+            if staged is not None:
+                staged.unlink(missing_ok=True)
 
     def seed_decoy_messages(self, count: int) -> int:
         """Put fabricated text messages on the phone before the app is started.
@@ -633,8 +735,14 @@ class _Emulator:
         time.sleep(5)
         return None
 
-    def drive(self, package: str) -> None:
-        """Tap around the app so behaviour behind the first screen is reached."""
+    def drive(self, package: str, activity: str | None = None) -> None:
+        """Tap around the app so behaviour behind the first screen is reached.
+
+        Monkey alone needs a LAUNCHER entry. Apps that hide theirs still need
+        their main activity brought to the foreground first.
+        """
+        if activity:
+            self.start_activity(package, activity)
         try:
             self._adb(
                 "shell", "monkey", "-p", package, "--throttle", "300", "-v", "300",
@@ -644,6 +752,21 @@ class _Emulator:
             # Driving the UI is best-effort; whatever the hooks already saw
             # still counts.
             pass
+
+    def start_activity(self, package: str, activity: str) -> str | None:
+        """Open a specific activity. Returns None on success, else the reason.
+
+        Used when Frida cannot find a LAUNCHER front-door: many SMS harvesters
+        declare a MainActivity but never expose it as the home-screen entry.
+        """
+        component = f"{package}/{activity}"
+        result = self._adb(
+            "shell", "am", "start", "-W", "-n", component, timeout=60,
+        )
+        output = f"{result.stdout}{result.stderr}".strip()
+        if result.returncode != 0 or "Error" in output:
+            return output or "am start gave no reason"
+        return None
 
     def save_logcat(self, artifacts: dict) -> str | None:
         destination = artifacts.get("pcap")
@@ -682,4 +805,5 @@ __all__ = [
     "event_from_payload",
     "events_from_payloads",
     "hook_script_source",
+    "pick_launch_activity",
 ]

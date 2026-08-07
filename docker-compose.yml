@@ -5,6 +5,10 @@ services:
       POSTGRES_USER: malware
       POSTGRES_PASSWORD: malware
       POSTGRES_DB: malware_analysis
+    ports:
+      # Published so the analysis API can run on the host (needed for the
+      # Android emulator, which cannot live inside the slim backend image).
+      - "5432:5432"
     volumes:
       # Postgres 18 stores data under a major-version subdirectory so that
       # `pg_upgrade --link` can work across a single mount point. Mounting the
@@ -18,13 +22,18 @@ services:
 
   backend:
     build: ./backend
+    # Android detonation needs the host emulator + /dev/kvm. Prefer running
+    # the API on the host against this Postgres (see start comments below).
+    # This service stays available for Windows/static-only work in Docker.
+    profiles: ["docker-backend"]
     env_file: ./backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg2://malware:malware@db:5432/malware_analysis
       SAMPLE_STORAGE_DIR: /app/storage/samples
     volumes:
       - ./backend:/app
-      - samples:/app/storage/samples
+      # Bind-mount so host-run API and Docker share the same sample files.
+      - ./backend/storage/samples:/app/storage/samples
     ports:
       - "8000:8000"
     depends_on:
@@ -36,9 +45,15 @@ services:
     image: node:22-alpine
     working_dir: /app
     environment:
-      # The dev server proxies /api to the backend. Inside the container that is
-      # the compose service name, not localhost.
-      BACKEND_ORIGIN: http://backend:8000
+      # The containerised backend, so `docker compose up` works unattended.
+      #
+      # Android detonation is the exception: the emulator runs on the host, so
+      # the API has to run there too. For that, start the backend on the host and
+      # override this — `BACKEND_ORIGIN=http://host.docker.internal:8000 docker
+      # compose up frontend` — which the extra_hosts entry below makes routable.
+      BACKEND_ORIGIN: ${BACKEND_ORIGIN:-http://backend:8000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./frontend:/app
       # Keep container-built node_modules out of the host bind mount: the two
@@ -48,9 +63,8 @@ services:
       - "5173:5173"
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
-      - backend
+      - db
 
 volumes:
   pgdata:
-  samples:
   frontend_modules:

@@ -3,6 +3,7 @@ import respx
 
 from app.analysis.narrative import (
     NarrativeWriter,
+    _parse_sections,
     build_facts,
     normalize_model,
 )
@@ -57,6 +58,14 @@ class TestModelNaming:
 
     def test_a_plain_model_name_is_unchanged(self):
         assert normalize_model("gemma4:31b", "https://ollama.com") == "gemma4:31b"
+
+
+class TestParseSections:
+    def test_json_wrapped_in_markdown_fences_is_parsed(self):
+        wrapped = f"```json\n{SECTIONS_JSON}\n```"
+        sections = _parse_sections(wrapped)
+        assert sections["overview"] == "A Windows program was examined."
+        assert sections["assessment"] == "The file is malicious."
 
 
 class TestWhatIsSent:

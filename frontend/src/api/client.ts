@@ -1,6 +1,7 @@
 import type {
   Health,
   Report,
+  SampleStatus,
   SampleSummary,
   UploadReceipt,
 } from "./types";
@@ -54,6 +55,14 @@ export const api = {
   list: () => request<SampleSummary[]>("/samples"),
 
   get: (id: number) => request<Report>(`/samples/${id}`),
+
+  /* Separate from upload on purpose: this is the point the file stops being
+   * read and starts being executed. Returns as soon as the run is accepted;
+   * progress lands on the report via polling. */
+  detonate: (id: number) =>
+    request<{ id: number; status: SampleStatus }>(`/samples/${id}/detonate`, {
+      method: "POST",
+    }),
 
   upload(file: File, signal?: AbortSignal) {
     const form = new FormData();
