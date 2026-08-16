@@ -85,7 +85,7 @@ This suite provides a safe, contained, and air-gapped forensic environment to qu
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/mights-space-master.git
+git clone https://github.com/Shrujal00/mights-space.git
 cd mights-space-master
 ```
 
